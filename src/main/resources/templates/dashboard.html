@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Tracker Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #090a0f; 
+            --card-bg: rgba(16, 18, 27, 0.85); 
+            --accent-blue: #00f3ff; 
+            --accent-purple: #b026ff;
+            --accent-pink: #ff007f; /* Nuevo Rosa Neón */
+            --text-main: #e2e8f0; 
+            --text-muted: #8b9bb4;
+            --border: rgba(0, 243, 255, 0.2);
+            --glow-blue: 0 0 10px rgba(0, 243, 255, 0.5); 
+            --glow-purple: 0 0 10px rgba(176, 38, 255, 0.5);
+            --glow-pink: 0 0 10px rgba(255, 0, 127, 0.5);
+        }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background: var(--bg-color); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 40px; 
+            display: grid; 
+            grid-template-columns: 420px 1fr; 
+            gap: 30px; 
+            background-image: linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px); 
+            background-size: 30px 30px; 
+        }
+        h1, h2 { font-weight: 600; margin-top: 0; text-transform: uppercase; letter-spacing: 1px; }
+        h1 span { color: var(--accent-blue); text-shadow: var(--glow-blue); } 
+        h2 span { color: var(--accent-purple); text-shadow: var(--glow-purple); }
+        .panel { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border); 
+            border-radius: 12px; 
+            padding: 30px; 
+            backdrop-filter: blur(12px); 
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.1); 
+            height: fit-content;
+            transition: all 0.3s ease;
+        }
+
+        /* --- MODO EDICIÓN EN ROSA NEÓN --- */
+        .panel.edit-mode {
+            border: 2px solid var(--accent-pink);
+            box-shadow: 0 0 25px rgba(255, 0, 127, 0.3);
+            background: rgba(45, 10, 30, 0.85); /* Fondo tintado en rosa/vino */
+        }
+        .panel.edit-mode h2 span {
+            color: var(--accent-pink);
+            text-shadow: var(--glow-pink);
+        }
+        .panel.edit-mode label { color: #ff80bf; } /* Etiquetas rosas */
+        .panel.edit-mode button {
+            border-color: var(--accent-pink);
+            color: var(--accent-pink);
+            box-shadow: var(--glow-pink);
+            text-shadow: var(--glow-pink);
+        }
+        .panel.edit-mode button:hover {
+            background: var(--accent-pink);
+            color: var(--bg-color);
+            box-shadow: 0 0 25px rgba(255, 0, 127, 0.8);
+        }
+
+        /* Ocultar flechas de los inputs numéricos */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; margin: 0; 
+        }
+        input[type=number] { -moz-appearance: textfield; }
+
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; color: var(--accent-blue); font-size: 0.8em; text-transform: uppercase; transition: color 0.3s; }
+        
+        input, select, textarea { 
+            width: 100%; padding: 8px; background: rgba(0, 0, 0, 0.5); 
+            border: 1px solid rgba(176, 38, 255, 0.3); border-radius: 6px; 
+            color: var(--accent-blue); font-family: monospace; box-sizing: border-box; 
+        }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-purple); box-shadow: var(--glow-purple); }
+        .panel.edit-mode input:focus, .panel.edit-mode select:focus, .panel.edit-mode textarea:focus {
+            border-color: var(--accent-pink); box-shadow: var(--glow-pink);
+        }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; } 
+        .full-width { grid-column: 1 / -1; }
+        
+        button { 
+            width: 100%; padding: 12px; background: transparent; color: var(--accent-blue); 
+            border: 2px solid var(--accent-blue); border-radius: 6px; font-weight: bold; 
+            cursor: pointer; transition: 0.3s; text-transform: uppercase; 
+            box-shadow: var(--glow-blue); text-shadow: var(--glow-blue); 
+        }
+        button:hover { background: var(--accent-blue); color: var(--bg-color); box-shadow: 0 0 25px rgba(0, 243, 255, 0.8); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85em; }
+        th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid rgba(176, 38, 255, 0.2); }
+        th { color: var(--accent-purple); } tr:hover { background: rgba(176, 38, 255, 0.05); }
+        .badge { border: 1px solid var(--accent-purple); color: var(--accent-purple); padding: 4px 6px; border-radius: 4px; font-weight: bold; background: transparent; box-shadow: inset 0 0 5px rgba(176, 38, 255, 0.3); }
+        .grade { font-weight: bold; color: #4ade80; } .grade-letter { color: #facc15; font-size: 1.1em;}
+        .action-link { text-decoration: none; margin-right: 8px; font-family: monospace; font-weight: bold; }
+        .pdf { color: #00f3ff; } .edit { color: #b026ff; } .delete { color: #ff003c; }
+        .pdf:hover { text-shadow: var(--glow-blue); } .edit:hover { text-shadow: var(--glow-purple); } .delete:hover { text-shadow: 0 0 10px rgba(255, 0, 60, 0.6); }
+        .filter-bar { display: flex; gap: 15px; align-items: flex-end; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid var(--accent-purple); margin-bottom: 15px; }
+        .avg-box { float: right; background: rgba(0,243,255,0.1); padding: 8px 15px; border-radius: 6px; border: 1px solid var(--accent-blue); font-family: monospace; font-size: 1.2em; text-shadow: var(--glow-blue); color: var(--text-main); }
+    </style>
+
+    <!-- SCRIPT DE VALIDACIÓN ACTUALIZADO -->
+    <script>
+        function validarCalificacion(input) {
+            // Elimina inmediatamente cualquier cosa que no sea número (bloquea puntos decimales y letras)
+            input.value = input.value.replace(/[^0-9]/g, '');
+            
+            // Si el número es mayor a 100, crea una alerta nativa de error en rojo
+            if (input.value !== '' && parseInt(input.value) > 100) {
+                input.setCustomValidity('Error: Grade cannot exceed 100.');
+                input.reportValidity(); // Lanza la burbuja roja
+            } else {
+                input.setCustomValidity(''); // Borra el error si todo está bien
+            }
+        }
+    </script>
+</head>
+<body>
+    <!-- PANEL IZQUIERDO -->
+    <div class="panel" th:classappend="${alumno.id} != null ? 'edit-mode' : ''">
+        <h2 th:utext="${alumno.id} != null ? 'Edit <span>Student</span>' : 'Add <span>Student</span>'">Add</h2>
+        
+        <form th:action="@{/guardar}" th:object="${alumno}" method="post">
+            <input type="hidden" th:field="*{id}" />
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" th:field="*{nombre}" required />
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Teacher</label>
+                    <select th:field="*{profesor}">
+                        <option value="Melanie Garza">Melanie Garza</option>
+                        <option value="Karen Garza">Karen Garza</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Term (e.g. SEPT-JAN 2026)</label>
+                    <!-- Forzamos visualmente las mayúsculas -->
+                    <input type="text" th:field="*{term}" required style="text-transform: uppercase;" />
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Group</label>
+                    <select th:field="*{grupo}">
+                        <option value="Start Up 1">Start Up 1</option>
+                        <option value="Start Up 2">Start Up 2</option>
+                        <option value="Start Up 3">Start Up 3</option>
+                        <option value="Start Up 4">Start Up 4</option>
+                        <option value="Start Up 5">Start Up 5</option>
+                        <option value="Start Up 6">Start Up 6</option>
+                        <option value="Start Up 7">Start Up 7</option>
+                        <option value="Start Up 8">Start Up 8</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Schedule</label>
+                    <select th:field="*{horario}">
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Calificaciones con Validación Estricta -->
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Mid Exam (15%)</label>
+                    <input type="number" min="0" max="100" step="1" th:field="*{midTermExam}" placeholder="0-100" style="padding: 6px;" oninput="validarCalificacion(this)"/>
+                </div>
+                <div class="form-group">
+                    <label>Mid Proj. (15%)</label>
+                    <input type="number" min="0" max="100" step="1" th:field="*{midTermProject}" placeholder="0-100" style="padding: 6px;" oninput="validarCalificacion(this)"/>
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Final Exam (15%)</label>
+                    <input type="number" min="0" max="100" step="1" th:field="*{finalExam}" placeholder="0-100" style="padding: 6px;" oninput="validarCalificacion(this)"/>
+                </div>
+                <div class="form-group">
+                    <label>Final Proj. (15%)</label>
+                    <input type="number" min="0" max="100" step="1" th:field="*{finalProject}" placeholder="0-100" style="padding: 6px;" oninput="validarCalificacion(this)"/>
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Attendance (20%)</label>
+                    <input type="number" min="0" max="100" step="1" th:field="*{asistencia}" placeholder="0-100" style="padding: 6px;" oninput="validarCalificacion(this)"/>
+                </div>
+                <div class="form-group">
+                    <label>Oral Exam (20%)</label>
+                    <input type="number" min="0" max="100" step="1" th:field="*{oralExam}" placeholder="0-100" style="padding: 6px;" oninput="validarCalificacion(this)"/>
+                </div>
+            </div>
+
+            <div class="form-group full-width">
+                <label>Feedback Data</label>
+                <textarea th:field="*{comentarios}" rows="2"></textarea>
+            </div>
+            
+            <button type="submit" th:text="${alumno.id} != null ? 'Update Record' : 'Save Record'"></button>
+            <a th:if="${alumno.id} != null" href="/" style="display:block; text-align:center; color:#8b9bb4; margin-top:10px; text-decoration:none; font-family:monospace;">[ Abort Edit Sequence ]</a>
+        </form>
+    </div>
+
+    <!-- PANEL DERECHO: VISTA Y FILTROS -->
+    <div class="panel">
+        <div class="avg-box">Group Avg: <span style="color:#00f3ff;" th:text="${promedioGrupo}">0.0</span></div>
+        <h1>Class <span>Overview</span></h1>
+        
+        <form th:action="@{/}" method="get" class="filter-bar">
+            <div style="flex: 1;">
+                <label>Teacher</label>
+                <select name="fProfesor">
+                    <option value="">All</option>
+                    <option value="Melanie Garza" th:selected="${fProfesor == 'Melanie Garza'}">Melanie Garza</option>
+                    <option value="Karen Garza" th:selected="${fProfesor == 'Karen Garza'}">Karen Garza</option>
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label>Group</label>
+                <select name="fGrupo">
+                    <option value="">All</option>
+                    <option value="Start Up 1" th:selected="${fGrupo == 'Start Up 1'}">Start Up 1</option>
+                    <option value="Start Up 2" th:selected="${fGrupo == 'Start Up 2'}">Start Up 2</option>
+                    <option value="Start Up 3" th:selected="${fGrupo == 'Start Up 3'}">Start Up 3</option>
+                    <option value="Start Up 4" th:selected="${fGrupo == 'Start Up 4'}">Start Up 4</option>
+                    <option value="Start Up 5" th:selected="${fGrupo == 'Start Up 5'}">Start Up 5</option>
+                    <option value="Start Up 6" th:selected="${fGrupo == 'Start Up 6'}">Start Up 6</option>
+                    <option value="Start Up 7" th:selected="${fGrupo == 'Start Up 7'}">Start Up 7</option>
+                    <option value="Start Up 8" th:selected="${fGrupo == 'Start Up 8'}">Start Up 8</option>
+                </select>
+            </div>
+            <button type="submit" style="padding: 8px 15px; width: auto; margin-top: 0;">Filter</button>
+        </form>
+
+        <form th:action="@{/promover}" method="post" class="filter-bar" style="border-color: #b026ff;">
+            <div style="flex: 1;">
+                <label>Teacher</label>
+                <select name="pProfesor" required>
+                    <option value="Melanie Garza">Melanie Garza</option>
+                    <option value="Karen Garza">Karen Garza</option>
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label>From</label>
+                <select name="pGrupoActual" required>
+                    <option value="Start Up 1">Start Up 1</option>
+                    <option value="Start Up 2">Start Up 2</option>
+                    <option value="Start Up 3">Start Up 3</option>
+                    <option value="Start Up 4">Start Up 4</option>
+                    <option value="Start Up 5">Start Up 5</option>
+                    <option value="Start Up 6">Start Up 6</option>
+                    <option value="Start Up 7">Start Up 7</option>
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label>To</label>
+                <select name="pNuevoGrupo" required>
+                    <option value="Start Up 2">Start Up 2</option>
+                    <option value="Start Up 3">Start Up 3</option>
+                    <option value="Start Up 4">Start Up 4</option>
+                    <option value="Start Up 5">Start Up 5</option>
+                    <option value="Start Up 6">Start Up 6</option>
+                    <option value="Start Up 7">Start Up 7</option>
+                    <option value="Start Up 8">Start Up 8</option>
+                </select>
+            </div>
+            <div style="flex: 1.5;">
+                <label>New Term</label>
+                <input type="text" name="pNuevoTerm" placeholder="Feb-Jul 2026" required style="padding: 6px; text-transform: uppercase;" />
+            </div>
+            <button type="submit" 
+                    title="🚀 LEVEL UP GROUP (Copies filtered students & resets grades)"
+                    style="border-color:#b026ff; color:#b026ff; padding: 8px 15px; width: auto; margin-top: 0;" 
+                    onclick="return confirm('Promote group? Grades will be reset in the new copies.');">
+                LEVEL UP
+            </button>
+        </form>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Term</th>
+                    <th>Gr & Sch</th>
+                    <th>Final Grade</th>
+                    <th>Ltr</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="a : ${alumnos}">
+                    <td th:text="${a.nombre}">-</td>
+                    <td th:text="${a.term}">-</td>
+                    <td><span class="badge" th:text="${a.grupo} + ' ' + ${a.horario}">-</span></td>
+                    <td class="grade" th:text="${a.getCalificacionFinal()}">-</td>
+                    <td class="grade-letter" th:text="${a.getLetraAmericana()}">-</td>
+                    <td>
+                        <a th:href="@{/boleta/{id}(id=${a.id})}" class="action-link pdf">PDF</a>
+                        <a th:href="@{/editar/{id}(id=${a.id})}" class="action-link edit">EDIT</a>
+                        <a th:href="@{/eliminar/{id}(id=${a.id})}" class="action-link delete" onclick="return confirm('Delete?');">DEL</a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
